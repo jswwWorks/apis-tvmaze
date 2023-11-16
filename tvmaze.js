@@ -1,10 +1,12 @@
 "use strict";
 
+const TVMAZE_API_URL_ROOT = "http://api.tvmaze.com";
 const MISSING_IMAGE_URL = "https://tinyurl.com/tv-missing";
+
 const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
-
+//global constant for api url
 
 /** Given a search term, search for tv shows that match that query.
  *
@@ -17,18 +19,20 @@ async function getShowsByTerm(term) {
   // ADD: Remove placeholder & make request to TVMaze search shows API.
 
 
-  const params = new URLSearchParams({ q : term });
+  const params = new URLSearchParams({ q: term });
 
-  const response = await fetch(`http://api.tvmaze.com/search/shows?${params}`);
+  const response = await fetch(`${TVMAZE_API_URL_ROOT}/search/shows?${params}`);
   const showsData = await response.json();
   //console.log(showsData);
 
-  return showsData.map(function (scoreAndShow){
+  return showsData.map(function (scoreAndShow) {
     return {
-      "id" : scoreAndShow.show.id,
-      "name" : scoreAndShow.show.name,
-      "summary" : scoreAndShow.show.summary,
-      "image" : scoreAndShow.show.image ? scoreAndShow.show.image.medium : MISSING_IMAGE_URL
+      "id": scoreAndShow.show.id,
+      "name": scoreAndShow.show.name,
+      "summary": scoreAndShow.show.summary,
+      "image": scoreAndShow.show.image
+        ? scoreAndShow.show.image.medium
+        : MISSING_IMAGE_URL
     };
 
   });
@@ -85,79 +89,86 @@ async function searchShowsAndDisplay() {
 /** Takes event object, prevents screen from reloading.
  * Calls function that searches for show.
  *  */
-$searchForm.on("submit", async function handleSearchForm (evt) {
+$searchForm.on("submit", async function handleSearchForm(evt) {
   evt.preventDefault();
   await searchShowsAndDisplay();
 });
-
-
 
 
 /** Given a show ID, get from API and return (promise) array of episodes:
  *      { id, name, season, number }
  */
 
-async function getEpisodesOfShow(id) {
-  console.log('getEpisodesData triggered', "id = ", id);
-  const response = await fetch(`http://api.tvmaze.com/shows/${id}/episodes`);
+async function getEpisodesOfShow(showId) {
+  console.log('getEpisodesData triggered', "id = ", showId);
+  const response = await fetch(`${TVMAZE_API_URL_ROOT}/shows/${showId}/episodes`);
   const episodesData = await response.json();
   console.log(episodesData);
 
-  return episodesData.map(function (episodeDetails){
-    return {
-      "id" : episodeDetails.id,
-      "name" : episodeDetails.name,
-      "season" : episodeDetails.season,
-      "number" : episodeDetails.number
-    };
+  //Destructuring
+  return episodesData.map(function ({ id, name, season, number }) {
+    // const {id, name, season, number} = episodeDetails
+    return { id, name, season, number };
+    // return {
+    //   "id" : episodeDetails.id,
+    //   "name" : episodeDetails.name,
+    //   "season" : episodeDetails.season,
+    //   "number" : episodeDetails.number
+    // };
 
   });
 
 }
-
-
 
 /** Takes array of information about tv show episodes and displays that info
  *  in the DOM. Returns nothing.
  */
 function displayEpisodes(episodes) {
 
+  const $episodeList = $("<ul>");
 
+  for (const episode of episodes) {
+    const $episode = $(`
+          <li>${episode.name} (Season ${episode.season}, Number ${episode.number})</li>
+      `);
+    $episodeList.append($episode);
 
-
+  }
+  $episodesArea.append($episodeList);
 }
 
 
-/** Takes event object, finds id of show based on which "Episodes" button got
- *  clicked, sends id to another function to retrieve data on the episodes,
- *  calls displayEpisodes(). Returns nothing.
+/** Takes showID, sends id to another function to retrieve data (array) of the
+ * episodes, reveals episodes area and calls displayEpisodes().
  */
-async function searchEpisodesAndDisplay(evt) {
-  const $evtTarget = $(evt.target);
-  const id = $evtTarget.closest(".Show").data("showId");
-  console.log("id = ", id);
+async function searchEpisodesAndDisplay(showId) {
+  const episodes = await getEpisodesOfShow(showId);
 
-  // Get id of show
-  const episodes = await getEpisodesOfShow(id);
+  $episodesArea.show();
+  displayEpisodes(episodes);
 
 }
-
-
 
 // Make jQuery object for each show's episode button
 const $episodesButtons = $(".Show-getEpisodes");
 
 
 /** Triggers when "Episodes" button beneath a show is clicked. Prevents screen
- *  from reloading and calls function that retrieves an episode id.
+ *  from reloading and gets show ID from event target.
+ *  Calls function to show episodes and display with show ID
  *  Returns nothing.
  */
-$showsList.on("click", $episodesButtons, async function episodeClickHandler (evt) {
+$showsList.on("click", $episodesButtons, async function episodeClickHandler(evt) {
   console.log("woohoo button was clicked!");
   console.log("evt =", evt, "evt.target= ", evt.target);
   evt.preventDefault();
 
-  await searchEpisodesAndDisplay(evt);
+  // Get id of show
+  const $evtTarget = $(evt.target);
+  const showId = $evtTarget.closest(".Show").data("showId");
+  console.log("id = ", showId);
+
+  await searchEpisodesAndDisplay(showId);
 
 })
 
