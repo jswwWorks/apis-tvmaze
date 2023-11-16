@@ -21,7 +21,7 @@ async function getShowsByTerm(term) {
 
   const response = await fetch(`http://api.tvmaze.com/search/shows?${params}`);
   const showsData = await response.json();
-  console.log(showsData);
+  //console.log(showsData);
 
   return showsData.map(function (scoreAndShow){
     return {
@@ -91,14 +91,73 @@ $searchForm.on("submit", async function handleSearchForm (evt) {
 });
 
 
+
+
 /** Given a show ID, get from API and return (promise) array of episodes:
  *      { id, name, season, number }
  */
 
-// async function getEpisodesOfShow(id) { }
+async function getEpisodesOfShow(id) {
+  console.log('getEpisodesData triggered', "id = ", id);
+  const response = await fetch(`http://api.tvmaze.com/shows/${id}/episodes`);
+  const episodesData = await response.json();
+  console.log(episodesData);
 
-/** Write a clear docstring for this function... */
+  return episodesData.map(function (episodeDetails){
+    return {
+      "id" : episodeDetails.id,
+      "name" : episodeDetails.name,
+      "season" : episodeDetails.season,
+      "number" : episodeDetails.number
+    };
 
-// function displayEpisodes(episodes) { }
+  });
 
-// add other functions that will be useful / match our structure & design
+}
+
+
+
+/** Takes array of information about tv show episodes and displays that info
+ *  in the DOM. Returns nothing.
+ */
+function displayEpisodes(episodes) {
+
+
+
+
+}
+
+
+/** Takes event object, finds id of show based on which "Episodes" button got
+ *  clicked, sends id to another function to retrieve data on the episodes,
+ *  calls displayEpisodes(). Returns nothing.
+ */
+async function searchEpisodesAndDisplay(evt) {
+  const $evtTarget = $(evt.target);
+  const id = $evtTarget.closest(".Show").data("showId");
+  console.log("id = ", id);
+
+  // Get id of show
+  const episodes = await getEpisodesOfShow(id);
+
+}
+
+
+
+// Make jQuery object for each show's episode button
+const $episodesButtons = $(".Show-getEpisodes");
+
+
+/** Triggers when "Episodes" button beneath a show is clicked. Prevents screen
+ *  from reloading and calls function that retrieves an episode id.
+ *  Returns nothing.
+ */
+$showsList.on("click", $episodesButtons, async function episodeClickHandler (evt) {
+  console.log("woohoo button was clicked!");
+  console.log("evt =", evt, "evt.target= ", evt.target);
+  evt.preventDefault();
+
+  await searchEpisodesAndDisplay(evt);
+
+})
+
